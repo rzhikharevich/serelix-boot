@@ -1,0 +1,141 @@
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdbool.h>
+#include "intrinsics.h"
+#include "hash.h"
+
+static size_t StringKeyHash(const char **key) {
+	return HashString(*key);
+}
+
+static bool StringKeyEq(const char **key1, const char **key2) {
+	return !strcmp(*key1, *key2);
+}
+
+static size_t HashTabOptimalNumSlots(size_t nElements) {
+	return nElements > 0 ? (size_t)1 << (SIZE_WIDTH - CountLeadingZerosN(nElements * 4 / 3)) : 0;
+}
+
+static size_t HashTabTrimHash(size_t hash, size_t nSlots) {
+	return hash & (nSlots - 1);
+}
+
+@generic HashTab K V H C
+
+typedef struct {
+	char occupied;
+	K key;
+	V value;
+} T##Slot;
+
+typedef struct {
+	size_t nElements;
+	size_t nSlots;
+	T##Slot *slots;
+} T;
+
+static bool T##InitWithCapacity(T *self, size_t capacity) {
+	self->nElements = 0;
+	self->nSlots = HashTabOptimalNumSlots(capacity);
+
+	if (self->nSlots > 0 && !(self->slots = malloc(sizeof(T##Slot) * self->nSlots)))
+		return false;
+
+	for (size_t i = 0; i < self->nSlots; i++)
+		self->slots[i].occupied = 0;
+
+	return true;
+}
+
+static bool T##Init(T *self) {
+	return T##InitWithCapacity(self, 12);
+}
+
+static void T##Deinit(T *self) {
+	free(self->slots);
+}
+
+static T##Slot *T##GetSlot(T *self, size_t hash, K *key) {
+	T##Slot *slot = self->slots + HashTabTrimHash(hash, self->nSlots);
+
+	T##Slot *end = self->slots + self->nSlots;
+
+	while (slot->occupied && !C(&slot->key, key)) {
+		slot++;
+
+		if (slot >= end)
+			return NULL;
+	}
+
+	return slot;
+}
+
+static bool T##Insert(T *self, K *key, V *value);
+
+static bool T##Rehash(T *self, size_t nSlots) {
+	T newSelf = {
+		.nElements = self->nElements,
+		.nSlots = nSlots,
+		.slots = malloc(nSlots * sizeof(T##Slot))
+	};
+
+	for (size_t i = 0; i < nSlots; i++)
+		newSelf.slots[i].occupied = 0;
+
+	if (!newSelf.slots)
+		return false;
+
+	for (size_t i = 0; i < self->nSlots; i++) {
+		if (!T##Insert(&newSelf, &self->slots[i].key, &self->slots[i].value)) {
+			T##Deinit(&newSelf);
+			return false;
+		}
+	}
+
+	*self = newSelf;
+
+	return true;
+}
+
+static bool T##InsertWithHash(T *self, size_t hash, K *key, V *value) {
+	T##Slot *slot = T##GetSlot(self, hash, key);
+
+	if (!slot) {
+		if (CountLeadingZerosN(self->nSlots) == 0)
+			return false;
+
+		if (!T##Rehash(self, self->nSlots << 1))
+			return false;
+
+		slot = T##GetSlot(self, hash, key);
+
+		if (!slot)
+			return false;
+	}
+
+	slot->occupied = 1;
+	memcpy(&slot->key, key, sizeof(K));
+	memcpy(&slot->value, value, sizeof(V));
+
+	return true;
+}
+
+static bool T##Insert(T *self, K *key, V *value) {
+	return T##InsertWithHash(self, H(key), key, value);
+}
+
+static V *T##GetWithHash(T *self, size_t hash, K *key) {
+	T##Slot *slot = T##GetSlot(self, hash, key);
+
+	if (slot && !slot->occupied)
+		return NULL;
+
+	return &slot->value;
+}
+
+static V *T##Get(T *self, K *key) {
+	return T##GetWithHash(self, H(key), key);
+}
+
+@end
