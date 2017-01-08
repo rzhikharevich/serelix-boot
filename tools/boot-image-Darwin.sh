@@ -37,9 +37,6 @@ cp BOOTX64.EFI $MEDIA_ROOT/EFI/BOOT
 
 mkdir -p $MEDIA_ROOT/srlxboot
 
-echo ' * /srlxboot/alotware.awf'
-cp src/alotware.awf $MEDIA_ROOT/srlxboot
-
 echo ' * /srlxboot/boot.cfg'
 cp boot.cfg $MEDIA_ROOT/srlxboot
 

@@ -47,7 +47,8 @@ CROSS_CFLAGS = \
 	$(COMMON_CROSS_CFLAGS) \
 	$(COMMON_CFLAGS) \
 	$(CWARNS) \
-	-I $(MDE)/Include -I $(MDE)/Include/$(EDK_ARCH)
+	-I $(MDE)/Include -I $(MDE)/Include/$(EDK_ARCH) \
+	-I ini
 
 MUSL_CFLAGS = $(COMMON_CROSS_CFLAGS)
 
@@ -55,7 +56,7 @@ YASM = yasm
 
 CROSS_LD = $(CROSS_CC)
 CROSS_LDFLAGS  = -e Init -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -flto -Ofast -Wl,--discard-all
-OBJS    != find src musl -name '*.c' | sed 's/\.c$$/\.o/g'
+OBJS    != find src musl ini -name '*.c' | sed 's/\.c$$/\.o/g'
 GHDRS   != find src -name '*.gh' | sed 's/\.gh$$/\.h/g'
 
 OVMF = ~/Development/UEFI/OVMF-X64-r15214
@@ -72,7 +73,7 @@ all: build
 
 build: BOOTX64.EFI
 
-BOOTX64.EFI: $(TOOLS) $(GHDRS) $(OBJS) src/alotware.awf
+BOOTX64.EFI: $(TOOLS) $(GHDRS) $(OBJS)
 	$(CROSS_LD) $(CROSS_LDFLAGS) $(OBJS) -o $@
 
 %.awf: %.S
@@ -81,13 +82,16 @@ BOOTX64.EFI: $(TOOLS) $(GHDRS) $(OBJS) src/alotware.awf
 %.h: %.gh
 	tools/template < $< > $@
 
-src/%.o: src/%.c
+src/%.o: src/%.c src/*.h
 	$(CROSS_CC) $(CROSS_CFLAGS) -c $< -o $@
 
 musl/%.o: musl/%.c
 	$(CROSS_CC) $(MUSL_CFLAGS) -c $< -o $@
 
-boot.img: BOOTX64.EFI boot.cfg src/alotware.awf
+ini/%.o: ini/%.c
+	$(CROSS_CC) $(CROSS_CFLAGS) -c $< -o $@
+
+boot.img: BOOTX64.EFI boot.cfg
 	tools/boot-image-$(HOST_OS).sh
 
 qemu-ovmf-run-monitor: boot.img

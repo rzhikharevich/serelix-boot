@@ -33,6 +33,13 @@ int vcbprintf(cbprintf_cb print, void *ctx, const char *fmt, va_list va) {
 
 	while (*fmt) {
 		if (*fmt == '%') {
+			int precision = -1;
+
+			if (fmt[1] == '.' && fmt[2] == '*') {
+				precision = va_arg(va, int);
+				fmt += 2;
+			}
+
 			enum {
 				LEN_DEFAULT,
 				LEN_LONG,
@@ -169,21 +176,30 @@ int vcbprintf(cbprintf_cb print, void *ctx, const char *fmt, va_list va) {
 					char c = (char)va_arg(va, int);
 					if (!print(ctx, &c, 1))
 						return -1;
+
+					break;
 				} case LEN_LONG: {
 					CHAR16 c16 = (CHAR16)va_arg(va, int);
 					char c[4];
 					if (!print(ctx, c, UTF16ToUTF8(c, &c16)))
 						return -1;
+
+					break;
 				} default:
 					return -1;
 				}
+
+				n++;
+				
 				break;
 			case T_STR: {
 				if (len != LEN_DEFAULT)
 					return -1;
 			
 				char *s = va_arg(va, char *);
-				size_t slen = strlen(s);
+
+				size_t slen = precision > -1 ?
+					(size_t)precision : strlen(s);
 
 				if (!print(ctx, s, slen))
 					return -1;
@@ -299,12 +315,9 @@ char *dgets(void) {
 
 		UINTN eventIndex;
 
-		if (gSystemTable->BootServices->WaitForEvent(
+		gSystemTable->BootServices->WaitForEvent(
 			1, &gSystemTable->ConIn->WaitForKey, &eventIndex
-		) != EFI_SUCCESS) {
-			free(input);
-			return NULL;
-		}
+		);
 
 		EFI_INPUT_KEY key;
 

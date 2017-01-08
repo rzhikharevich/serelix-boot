@@ -1,7 +1,7 @@
 *.o
 *.EFI
 *.img
-*.awf
 .clang_complete
 tools/template
 src/hashtab.h
+src/array.h

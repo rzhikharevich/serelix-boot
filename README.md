@@ -1,17 +1,21 @@
 # serelix-boot (srlxboot)
 
-srlxboot is a (yet) unfinished bootloader that aims to be simple and flexible.
+srlxboot is a tiny bootloader for UEFI machines.
 
 ## Goals
 
 From a broader view it's a part of a bigger OS development project called
 Serelix (SE-cure, REL-iable un-IX).
 
-Planned features:
-* Linux support
-* of course, support for my own kernel
-* a simple config format
+Features:
+* Linux support (done for EFI stub kernels)
+* of course, support for my own kernel (todo)
+* a simple config format (done, see boot.cfg)
 * plugins?
+
+## Building
+
+Run 'make MDE=/path/to/MdePkg'
 
 ## Why?
 

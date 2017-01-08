@@ -52,9 +52,14 @@ void *malloc(size_t size) {
 	return blk->obj;
 }
 
-void *reallocf(void *obj, size_t size) {
+void *realloc(void *obj, size_t size) {
 	if (!obj)
 		return malloc(size);
+
+	if (size == 0) {
+		free(obj);
+		return NULL;
+	}
 
 	void *newObj = malloc(size);
 
@@ -68,7 +73,16 @@ void *reallocf(void *obj, size_t size) {
 		size < blk->size ? size : blk->size
 	);
 
-	free(blk);
+	free(obj);
+
+	return newObj;
+}
+
+void *reallocf(void *obj, size_t size) {
+	void *newObj = realloc(obj, size);
+
+	if (!newObj && size > 0)
+		free(obj);
 
 	return newObj;
 }

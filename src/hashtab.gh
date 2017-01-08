@@ -56,6 +56,10 @@ static void T##Deinit(T *self) {
 	free(self->slots);
 }
 
+static size_t T##GetSize(T *self) {
+	return self->nElements;
+}
+
 static T##Slot *T##GetSlot(T *self, size_t hash, K *key) {
 	T##Slot *slot = self->slots + HashTabTrimHash(hash, self->nSlots);
 
@@ -71,7 +75,7 @@ static T##Slot *T##GetSlot(T *self, size_t hash, K *key) {
 	return slot;
 }
 
-static bool T##Insert(T *self, K *key, V *value);
+static V *T##Insert(T *self, K *key, V *value);
 
 static bool T##Rehash(T *self, size_t nSlots) {
 	T newSelf = {
@@ -98,37 +102,39 @@ static bool T##Rehash(T *self, size_t nSlots) {
 	return true;
 }
 
-static bool T##InsertWithHash(T *self, size_t hash, K *key, V *value) {
+static V *T##InsertWithHash(T *self, size_t hash, K *key, V *value) {
 	T##Slot *slot = T##GetSlot(self, hash, key);
 
 	if (!slot) {
 		if (CountLeadingZerosN(self->nSlots) == 0)
-			return false;
+			return NULL;
 
 		if (!T##Rehash(self, self->nSlots << 1))
-			return false;
+			return NULL;
 
 		slot = T##GetSlot(self, hash, key);
 
 		if (!slot)
-			return false;
+			return NULL;
 	}
 
 	slot->occupied = 1;
 	memcpy(&slot->key, key, sizeof(K));
 	memcpy(&slot->value, value, sizeof(V));
 
-	return true;
+	self->nElements++;
+
+	return &slot->value;
 }
 
-static bool T##Insert(T *self, K *key, V *value) {
+static V *T##Insert(T *self, K *key, V *value) {
 	return T##InsertWithHash(self, H(key), key, value);
 }
 
 static V *T##GetWithHash(T *self, size_t hash, K *key) {
 	T##Slot *slot = T##GetSlot(self, hash, key);
 
-	if (slot && !slot->occupied)
+	if (!slot || !slot->occupied)
 		return NULL;
 
 	return &slot->value;
@@ -136,6 +142,23 @@ static V *T##GetWithHash(T *self, size_t hash, K *key) {
 
 static V *T##Get(T *self, K *key) {
 	return T##GetWithHash(self, H(key), key);
+}
+
+static T##Slot *T##GetNextSlot(T *self, T##Slot *slot) {
+	T##Slot *end = self->slots + self->nSlots;
+
+	while (slot < end) {
+		if (slot->occupied)
+			return slot;
+
+		slot++;
+	}
+
+	return NULL;
+}
+
+static T##Slot *T##GetFirstSlot(T *self) {
+	return T##GetNextSlot(self, self->slots);
 }
 
 @end

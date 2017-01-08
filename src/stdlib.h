@@ -9,7 +9,9 @@ void exit(int code);
 
 ATTR_MALLOC
 void *malloc(size_t size);
+void *realloc(void *obj, size_t size);
 void *reallocf(void *obj, size_t size);
 void free(void *obj);
+size_t malloc_size(void *obj);
 
 #endif

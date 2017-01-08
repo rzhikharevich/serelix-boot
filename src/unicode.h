@@ -13,7 +13,7 @@ static inline unsigned UTF8GetCharLength(char ch) {
 	if (ch == 0)
 		return UTF8InvalidLength;
 
-	int lz = CountLeadingZeros32(~(unsigned)ch);
+	int lz = CountLeadingZeros32(~((unsigned)ch << 24));
 
 	if (lz > 4 || lz == 1)
 		return UTF8InvalidLength;
@@ -47,6 +47,7 @@ static inline UnicodeScalar UTF8ToScalar(const char *ch) {
 static inline size_t UTF8ToUTF16(CHAR16 *utf16, const char *utf8) {
 	UnicodeScalar scalar = UTF8ToScalar(utf8);
 	if (scalar > 0xFFFF) {
+		// TODO: check correctness.
 		scalar -= 0x10000;
 		utf16[0] = scalar >> 10;
 		utf16[1] = scalar & ((1 << 10) - 1);
