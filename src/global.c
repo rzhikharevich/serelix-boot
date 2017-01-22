@@ -1,4 +1,5 @@
 #include "global.h"
+#include "stdlib.h"
 #include <stdbool.h>
 
 EFI_HANDLE gImageHandle;
@@ -23,12 +24,7 @@ void InitSystem(
 				L"Initialization failed.\n\r"
 			);
 
-			// TODO: exit after a key press
-			while (true) {
-#if defined(__x86_64__) || defined(_M_X64)
-				__asm__ __volatile__ ("pause");
-#endif
-			}
+			exit(1);
 		}
 	}
 }

@@ -80,6 +80,7 @@ static void HandleConfigEntry(
 		entry->imageType = v;
 
 			IMGTY("efi", ImageEFI)
+			else IMGTY("serelix", ImageSerelix)
 			else {
 				cfg->ok = false;
 				

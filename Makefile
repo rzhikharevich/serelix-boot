@@ -55,9 +55,10 @@ MUSL_CFLAGS = $(COMMON_CROSS_CFLAGS)
 YASM = yasm
 
 CROSS_LD = $(CROSS_CC)
-CROSS_LDFLAGS  = -e Init -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -flto -Ofast -Wl,--discard-all
-OBJS    != find src musl ini -name '*.c' | sed 's/\.c$$/\.o/g'
-GHDRS   != find src -name '*.gh' | sed 's/\.gh$$/\.h/g'
+CROSS_LDFLAGS = -e Init -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -flto -Ofast -Wl,--discard-all
+
+OBJS  != find src musl ini -name '*.c' | sed 's/\.c$$/\.o/g'
+GHDRS != find src -name '*.gh' | sed 's/\.gh$$/\.h/g'
 
 OVMF = ~/Development/UEFI/OVMF-X64-r15214
 
@@ -76,9 +77,6 @@ build: BOOTX64.EFI
 BOOTX64.EFI: $(TOOLS) $(GHDRS) $(OBJS)
 	$(CROSS_LD) $(CROSS_LDFLAGS) $(OBJS) -o $@
 
-%.awf: %.S
-	yasm -f bin $< -o $@
-
 %.h: %.gh
 	tools/template < $< > $@
 
@@ -93,6 +91,9 @@ ini/%.o: ini/%.c
 
 boot.img: BOOTX64.EFI boot.cfg
 	tools/boot-image-$(HOST_OS).sh
+
+clean:
+	-rm -f tools/template $(OBJS) BOOTX64.EFI boot.img
 
 qemu-ovmf-run-monitor: boot.img
 	$(QEMU) $(QEMUFLAGS) -monitor stdio

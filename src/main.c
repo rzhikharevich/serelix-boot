@@ -3,35 +3,39 @@
 #include "vfs.h"
 #include "cfg.h"
 #include "efi_run.h"
+#include "srlx_run.h"
 
 static void ExecEntry(Entry *entry) {
+	if (entry->imageType == ImageInvalid)
+		return;
+
+	if (entry->imagePath.size == 0) {
+		printf("Missing image_path.\n");
+		return;
+	}
+
+	char path[entry->imagePath.size + 1];
+	memcpy(path, entry->imagePath.base, entry->imagePath.size);
+	path[entry->imagePath.size] = '\0';
+
+	VFSNode *file = NULL;
+	if (VFSGetNodeAtPath(&file, path) != VFSSuccess) {
+		printf("Failed to open the image.\n");
+		return;
+	}
+
+	void *img;
+	size_t size;
+	if (VFSReadAll(file, &img, &size, false) != VFSSuccess) {
+		printf("Failed to read the image.\n");
+		VFSRelease(file);
+		return;
+	}
+
+	VFSRelease(file);
+
 	switch (entry->imageType) {
 	case ImageEFI: {
-		if (entry->imagePath.size == 0) {
-			printf("Missing image_path.\n");
-			return;
-		}
-
-		char path[entry->imagePath.size + 1];
-		memcpy(path, entry->imagePath.base, entry->imagePath.size);
-		path[entry->imagePath.size] = '\0';
-
-		VFSNode *file = NULL;
-		if (VFSGetNodeAtPath(&file, path) != VFSSuccess) {
-			printf("Failed to open the image.\n");
-			return;
-		}
-
-		void *img;
-		size_t size;
-		if (VFSReadAll(file, &img, &size, false) != VFSSuccess) {
-			printf("Failed to read the image.\n");
-			VFSRelease(file);
-			return;
-		}
-
-		VFSRelease(file);
-
 		if (
 			RunEFIImage(
 				img, size,
@@ -42,13 +46,24 @@ static void ExecEntry(Entry *entry) {
 			printf("Failed to run the image.\n");
 		}
 
-		free(img);
-
-		break;
-	} default:
-		printf("Invalid image type.\n");
 		break;
 	}
+	case ImageSerelix: {
+		RunSerelixImage(
+			img, size,
+			entry->commandLine.base,
+			entry->commandLine.size
+		);
+
+		printf("Failed to run the kernel.\n");
+	
+		break;
+	}
+	case ImageInvalid:
+		__builtin_unreachable();
+	}
+
+	free(img);
 }
 
 int Main(void) {
@@ -104,8 +119,6 @@ int Main(void) {
 		i++;
 	}
 
-	(void)entries;
-
 	printf("\n");
 	
 	if (config.defaultEntry) {
@@ -130,6 +143,7 @@ int Main(void) {
 						key.UnicodeChar >= L'a' && key.UnicodeChar <= L'z' &&
 						(unsigned)(key.UnicodeChar - L'a') < EntryTableGetSize(&config.entries)
 					) {
+						printf("\n");
 						ExecEntry(entries[key.UnicodeChar - L'a']);
 					} else {
 						goto no_timeout;
@@ -140,6 +154,7 @@ int Main(void) {
 			}
 		}
 
+		printf("\n");
 		ExecEntry(config.defaultEntry);
 	}
 
@@ -162,6 +177,7 @@ no_timeout:
 			key.UnicodeChar >= L'a' && key.UnicodeChar <= L'z' &&
 			(unsigned)(key.UnicodeChar - L'a') < EntryTableGetSize(&config.entries)
 		) {
+			printf("\n");
 			ExecEntry(entries[key.UnicodeChar - L'a']);
 		}
 	}

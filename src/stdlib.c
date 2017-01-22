@@ -96,6 +96,15 @@ void free(void *obj) {
 	gSystemTable->BootServices->FreePool(blk);
 }
 
+size_t malloc_size(void *obj) {
+	if (!obj)
+		return 0;
+
+	memblk *blk = (memblk *)obj - 1;
+
+	return blk->size;
+}
+
 EFIAPI
 EFI_STATUS Init(
 	EFI_HANDLE        imageHandle,

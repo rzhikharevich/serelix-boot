@@ -104,10 +104,6 @@ VFSReturn VFSGetNodeAtPath(VFSNode **node, const char *path) {
 
 		VFSReturn ret = VFSGetChild(*node, node, comp);
 		if (ret != VFSSuccess) {
-			/*__asm__ __volatile (
-				"cli;hlt"
-				:: "a"(0x42), "b"(ret)
-			);*/
 			return ret;
 		}
 
@@ -142,6 +138,7 @@ VFSReturn VFSGetChild(VFSNode *node, VFSNode **child, const char *name) {
 		return VFSFailure;
 	}
 
+	// TODO: resolve ref cycle.
 	VFSRetain(*child); // cached reference
 
 	return VFSSuccess;

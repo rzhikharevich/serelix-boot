@@ -6,6 +6,7 @@
 
 typedef enum {
 	ImageEFI,
+	ImageSerelix,
 	ImageInvalid
 } ImageType;
 
